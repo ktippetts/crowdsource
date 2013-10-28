@@ -1,0 +1,303 @@
+<?xml version="1.0" ?>
+<!DOCTYPE project>
+<project name="crowdsource" default="build-compile">
+	
+    <property name="src.level"                 value="1.7" />
+    <property name="target.level"              value="1.7" />
+    <property name="test.compile.verbose"      value="true" />
+	
+    <property name="build.dir"                 location="${basedir}/build" />
+    <property name="dist.dir"                  location="${basedir}/dist" />
+    <property name="lib.dir"                   location="${basedir}/lib" />
+    <property name="test.lib.dir"              location="${lib.dir}/test-only" />
+    <property name="src.dir"                   location="${basedir}/src" />
+    <property name="test.dir"                  location="${basedir}/test" />
+    <property name="web.dir"                   location="${basedir}/WebContent" />
+    <property name="deploy.dir"                location="${build.dir}/deploy" />
+    <property name="wsdl.lib.dir"              location="${lib.dir}/non-deploy/wsdl" />
+
+    <property name="classes.dir"               location="${build.dir}/classes" />
+    <property name="junit.output.dir"          location="${build.dir}/junit" />
+    <property name="junit.classes.dir"         location="${junit.output.dir}/test-classes" />
+    <property name="junit.test_reports"        location="${junit.output.dir}/test-reports" />
+    <property name="extras.dir"                location="${basedir}/extras" />
+    <property name="scripts.dir"               location="${extras.dir}/debian/scripts" />
+    <property name="flat_libs.dir"             value="deployed-libraries" />
+
+    <property name="war.file"                  value="${dist.dir}/${ant.project.name}.war" />
+
+    <property name="debian.dir"                location="${build.dir}/debian" />
+    <property name="debian.control.file"       location="${extras.dir}/debian/control" />
+	<!-- location that the .war file will be placed when the debian package is installed -->
+    <property name="debian.deploy.loc"         value="/var/lib/tomcat7/webapps/" />
+
+    <property file="${basedir}/sonar.properties" />
+
+    <property name="sonarProjectName"          value="CRM Email" />
+    <property name="sonarProjectKey"           value="com.hp.web:${ant.project.name}" />
+    <property name="sonarProjectVersion"       value="1.0-SNAPSHOT" />
+
+    <property name="jacoco.dir"                location="${build.dir}/jacoco" />
+    <property name="jacoco.report.dir"         location="${jacoco.dir}/reports" />
+    <property name="jacoco.exec.file"          value="${jacoco.dir}/jacoco.exec" />
+
+    <property name="sonar.host" value="localhost" />
+    <property name="sonar.port" value="9000" />
+    <property name="sonar.context" value="/" />
+
+    <property name="sonar.mimosa.host" value="mimosa-uascrm-sonarserver.usa.hp.com" />
+    <property name="sonar.mimosa.port" value="9000" />
+    <property name="sonar.mimosa.context" value="/" />
+
+    <!-- P A T H S ========================================================= -->
+    <path id="classpath">
+        <fileset dir="${lib.dir}">
+            <include name="*/*.jar" />
+        </fileset>
+    </path>
+
+    <path id="classpath.wsdl">
+        <path refid="classpath" />
+        <fileset dir="${wsdl.lib.dir}">
+            <include name="*.jar" />
+        </fileset>
+    </path>
+
+    <path id="classpath.test">
+        <path refid="classpath" />
+        <fileset dir="${test.lib.dir}">
+            <include name="*/*.jar" />
+        </fileset>
+        <pathelement path="${classes.dir}" />
+    </path>
+
+    <path id="classpath.junit">
+        <path refid="classpath.test" />
+        <pathelement path="${junit.classes.dir}" />
+    </path>
+
+    <!-- c l e a n ========================================================= -->
+    <target name="clean" depends="test-clean" description="Clean up temporary files and subdirectories.">
+        <echo message="Cleaning up old targets..." />
+        <delete dir="${build.dir}" />
+        <delete dir="${dist.dir}" />
+        <delete dir="${flat_libs.dir}" />
+    </target>
+
+    <!-- i n i t =========================================================== -->
+    <target name="init" depends="clean">
+        <echo message="Initializing..." />
+        <tstamp />
+        <mkdir dir="${classes.dir}" />
+        <mkdir dir="${dist.dir}" />
+        <mkdir dir="${flat_libs.dir}" />
+    </target>
+
+    <!-- w s d l ========================================= -->
+    <!--target name="wsdl" depends="init" description="Build WSDL code.">
+        <echo message="Building WSDL sources..." />
+
+        <java classname="org.apache.cxf.tools.wsdlto.WSDLToJava" fork="true">
+            <classpath refid="classpath.wsdl" />
+            <arg value="-client" />
+            <arg value="-d" />
+            <arg value="${src.dir}" />
+        </java>
+    </target-->
+
+    <!-- b u i l d - c o m p i l e ========================================= -->
+    <target name="build-compile" depends="init" description="Compile Java code.">
+        <echo message="Compiling Java sources..." />
+
+    	<!-- This needs to be true or Sonar will not work properly -->
+        <property name="compiler.debug" value="true" />
+
+    	<!-- Java compilation done here... ================================= -->
+    	<javac srcdir="${src.dir}" destdir="${classes.dir}"
+               source="${src.level}" target="${target.level}" classpathref="classpath"
+               debug="${compiler.debug}" debuglevel="lines,vars,source"
+               includeantruntime="false" />
+    </target>
+
+    <!-- b u i l d - w a r ================================================= -->
+    <target name="build-war" depends="build-compile" description="Create WAR file.">
+    	<!-- Get build.number, if not already set -->
+        <property file="${basedir}/build.number" />
+
+        <echo message="Creating WAR file: BUILD ${build.number}" />
+        <copy file="${src.dir}/log4j.properties" todir="${classes.dir}" />
+        <copy todir="${flat_libs.dir}" flatten="true">
+            <fileset dir="${lib.dir}">
+                <include name="**/*.jar" />
+                <exclude name="**/misc-doc/**" />
+                <exclude name="**/non-deploy/**" />
+                <exclude name="**/test-only/**" />
+				<exclude name="**/*-sources.jar" />
+				<exclude name="**/*-javadoc.jar" />
+            </fileset>
+        </copy>
+
+        <war destfile="${war.file}" webxml="${web.dir}/WEB-INF/web.xml">
+            <fileset dir="${web.dir}" />
+            <lib dir="${flat_libs.dir}" />
+            <classes dir="${classes.dir}" />
+            <manifest>
+                <attribute name="Built-By"               value="Web Platform Team" />
+                <attribute name="Implementation-Title"   value="CRM Email Service" />
+                <attribute name="Implementation-Version" value="1.00.${build.number}" />
+                <attribute name="Implementation-Vendor"  value="Hewlett-Packard Development Company, LP." />
+            </manifest>
+        </war>
+
+        <copy file="${war.file}" todir="${deploy.dir}" />
+    </target>
+
+    <!-- == Building and running tests =========================================================== -->
+
+    <!-- t e s t - c l e a n =============================================== -->
+    <target name="test-clean" description="Clean and build tests (1).">
+        <echo message="Cleaning up test classes ..." />
+        <delete dir="${junit.output.dir}" />
+    </target>
+
+    <!-- t e s t - c o m p i l e =========================================== -->
+    <target name="test-compile" depends="build-compile" description="Compile Java test code (2).">
+        <echo message="Compiling tests..." />
+        <mkdir dir="${junit.output.dir}" />
+        <mkdir dir="${junit.classes.dir}" />
+        <javac srcdir="${test.dir}" destdir="${junit.classes.dir}"
+		       source="${src.level}" target="${target.level}" classpathref="classpath.test"
+               debug="true" debuglevel="lines,vars,source" includeAntRuntime="no"
+               verbose="${test.compile.verbose}" />
+    </target>
+
+    <!-- t e s t - r u n =================================================== -->
+    <target name="test-run" depends="test-compile" description="Run JUnit tests (3).">
+        <echo message="Running tests..." />
+        <mkdir dir="${junit.test_reports}" />
+        <junit printsummary="yes" haltonfailure="no" failureproperty="isUnitTestFailed" fork="yes" forkmode="once">
+            <classpath refid="classpath.junit" />
+            <formatter type="xml" />
+            <batchtest fork="yes" todir="${junit.test_reports}">
+                <fileset dir="${test.dir}" includes="**/*Test.java" />
+            </batchtest>
+        </junit>
+    </target>
+
+    <!-- t e s t - r e p o r t ============================================= -->
+    <target name="test-report" depends="test-run" description="Report JUnit test results (4).">
+        <echo message="Reporting tests..." />
+        <junitreport todir="${junit.output.dir}">
+            <fileset dir="${junit.test_reports}">
+                <include name="TEST-*.xml" />
+            </fileset>
+            <report format="frames" todir="${junit.output.dir}" />
+        </junitreport>
+    </target>
+
+    <!-- == Code coverage with Sonar (dependent on Jacoco) ===================================== -->
+	<target name="sonar-remote" depends="jacoco-clean,jacoco-report" description="Deploy build to remote Sonar.">
+        <echo message="Sonar..." />
+        <property name="sonar.host.url"                 value="http://${sonar.mimosa.host}:${sonar.mimosa.port}${sonar.mimosa.context}" />
+        <property name="sonar.jdbc.url"                 value="jdbc:mysql://${sonar.mimosa.host}:3306/sonar?useUnicode=true&amp;characterEncoding=utf8" />
+        <property name="sonar.jdbc.driverClassName"     value="com.mysql.jdbc.Driver" />
+        <property name="sonar.jdbc.username"            value="sonar" />
+        <property name="sonar.jdbc.password"            value="sonar" />
+
+        <property name="sonar.projectName"              value="${sonarProjectName}" />
+        <property name="sonar.projectKey"               value="${sonarProjectKey}" />
+        <property name="sonar.projectVersion"           value="${sonarProjectVersion}" />
+
+        <property name="sonar.language"                 value="java" />
+        <property name="sonar.sources"                  value="${src.dir}" />
+        <property name="sonar.binaries"                 value="${classes.dir}" />
+    	<property name="sonar.libraries"                value="${lib.dir}/common/*.jar" />
+        <property name="sonar.tests"                    value="${test.dir}" />
+        <property name="sonar.dynamicAnalysis"          value="reuseReports" />
+        <property name="sonar.surefire.reportsPath"     value="${junit.test_reports}" />
+
+        <!-- Tells Sonar which code coverage tool to use -->
+        <property name="sonar.java.coveragePlugin"      value="jacoco" />
+        <!-- Tells Sonar where the unit tests code coverage report is -->
+        <property name="sonar.jacoco.reportPath"        value="${jacoco.exec.file}" />
+        <!-- Tells Sonar where the integration tests code coverage report is -->
+        <!--property name="sonar.jacoco.itReportPath"     value="${jacoco.exec.file}" /-->
+	    <sonar:sonar xmlns:sonar="antlib:org.sonar.ant" />
+    </target>
+
+    <!-- s o n a r - l o c a l =================== -->
+    <target name="sonar-local" depends="jacoco-clean,jacoco-report" description="Deploy build to local Sonar.">
+        <echo message="Deploying to local Sonar..." />
+        <property name="sonar.host.url"                 value="http://${sonar.host}:${sonar.port}${sonar.context}" />
+
+        <property name="sonar.projectName"              value="${sonarProjectName}" />
+        <property name="sonar.projectKey"               value="${sonarProjectKey}" />
+        <property name="sonar.projectVersion"           value="${sonarProjectVersion}" />
+
+        <property name="sonar.language"                 value="java" />
+        <property name="sonar.sources"                  value="${src.dir}" />
+        <property name="sonar.binaries"                 value="${classes.dir}" />
+    	<property name="sonar.libraries"                value="${lib.dir}/common/*.jar" />
+        <property name="sonar.tests"                    value="${test.dir}" />
+        <property name="sonar.dynamicAnalysis"          value="reuseReports" />
+        <property name="sonar.surefire.reportsPath"     value="${junit.test_reports}" />
+    	
+    	<!-- use 'forceAnalysis' is a sonar anaylsis was stopped prematurely and now think one is already running -->
+    	<!-- property name="sonar.forceAnalysis"            value="true" / -->
+
+        <!-- Tells Sonar which code coverage tool to use -->
+        <property name="sonar.java.coveragePlugin"      value="jacoco" />
+        <!-- Tells Sonar where the unit tests code coverage report is -->
+        <property name="sonar.jacoco.reportPath"        value="${jacoco.exec.file}" />
+        <!-- Tells Sonar where the integration tests code coverage report is -->
+        <!--property name="sonar.jacoco.itReportPath"     value="${jacoco.exec.file}" /-->
+	    <sonar:sonar xmlns:sonar="antlib:org.sonar.ant" />
+    </target>
+
+    <!-- == Code coverage with Jacoco ========================================================== -->
+    <!-- Jacoco requires the jacocoant.jar to be added to the ANT_HOME/lib.
+         This file can be downloaded from http://jacoco.org/jacoco/index.html.
+      -->
+    <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml" />
+
+    <!-- j a c o c o - c l e a n =========================================== -->
+    <target name="jacoco-clean" description="Clean Jacoco intermediate objects (1).">
+        <echo message="Cleaning up Jacoco..." />
+        <delete dir="${jacoco.dir}" />
+    </target>
+
+    <!-- j a c o c o - r e p o r t ========================================= -->
+    <target name="jacoco-report" depends="jacoco-run" description="Generate Jacoco report (3).">
+        <echo message="Generating Jacoco reports..." />
+        <jacoco:report xmlns:jacoco="antlib:org.jacoco.ant">
+            <executiondata>
+                <file file="${jacoco.exec.file}"/>
+            </executiondata>
+            <structure name="JaCoCo Reports">
+                <classfiles>
+                    <fileset dir="${classes.dir}"/>
+                </classfiles>
+            	<sourcefiles encoding="UTF-8">
+            	    <fileset dir="${src.dir}"/>
+            	</sourcefiles>
+            </structure>
+            <html destdir="${jacoco.report.dir}"/>
+            <xml destfile="${jacoco.report.dir}/report.xml"/>
+    	</jacoco:report>
+    </target>
+
+    <!-- j a c o c o - r u n =============================================== -->
+    <target name="jacoco-run" depends="test-compile" description="Run Jacoco (2).">
+        <mkdir dir="${junit.test_reports}" />
+        <jacoco:coverage xmlns:jacoco="antlib:org.jacoco.ant" destfile="${jacoco.exec.file}">
+            <junit printsummary="yes" haltonfailure="no" failureproperty="isUnitTestFailed" fork="yes" forkmode="once">
+                <classpath refid="classpath.junit" />
+                <formatter type="xml" />
+                <batchtest fork="yes" todir="${junit.test_reports}">
+                    <fileset dir="${test.dir}" includes="**/*Test.java" />
+                </batchtest>
+            </junit>
+        </jacoco:coverage>
+    </target>
+
+</project>
