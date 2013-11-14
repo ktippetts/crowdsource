@@ -9,7 +9,7 @@
   <display-name>crowdsource</display-name>
 
   <listener>
-    <listener-class>com.dc.web.email.filter.AppInitializer</listener-class>
+    <listener-class>com.darkcanyon.web.filter.AppInitializer</listener-class>
   </listener>
 
   <servlet>
@@ -21,12 +21,13 @@
     </init-param>
     <init-param>
       <param-name>com.sun.jersey.config.property.packages</param-name>
-      <param-value>com.dc.web.email.service;com.dc.web.email.dto</param-value>
+      <param-value>com.darkcanyon.web.service;com.darkcanyon.dto</param-value>
     </init-param>
-    <init-param>
+    <!-- <init-param>
       <param-name>com.sun.jersey.spi.container.ResourceFilters</param-name>
-      <param-value>com.dc.web.email.filter.SharedSecurityFilter</param-value>
+      <param-value>com.darkcanyon.filter.SharedSecurityFilter</param-value>
     </init-param>
+     -->
     <load-on-startup>1</load-on-startup>
   </servlet>
 

@@ -28,5 +28,6 @@
 	<classpathentry kind="lib" path="lib/mongodb/mongo-java-driver-2.11.3.jar"/>
 	<classpathentry kind="lib" path="lib/morphia/morphia-0.105.jar"/>
 	<classpathentry kind="lib" path="lib/postgreSQL/postgresql-9.2-1002.jdbc4.jar"/>
+	<classpathentry kind="lib" path="lib/non-deploy/servlet-api.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
