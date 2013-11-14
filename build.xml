@@ -17,6 +17,8 @@
     <property name="wsdl.lib.dir"              location="${lib.dir}/non-deploy/wsdl" />
 
     <property name="classes.dir"               location="${build.dir}/classes" />
+	<property name="html.src.dir"			   location="${basedir}/src/com/darkcanyon/web/pages" />
+	<property name="html.dest.dir"			   location="${classes.dir}/com/darkcanyon/web/pages" />
     <property name="junit.output.dir"          location="${build.dir}/junit" />
     <property name="junit.classes.dir"         location="${junit.output.dir}/test-classes" />
     <property name="junit.test_reports"        location="${junit.output.dir}/test-reports" />
@@ -136,16 +138,22 @@
 				<exclude name="**/*-javadoc.jar" />
             </fileset>
         </copy>
+    	
+    	<copy todir="${html.dest.dir}">
+    		<fileset dir="${html.src.dir}">
+    			<include name="**/*.html" />
+    		</fileset>
+    	</copy>
 
         <war destfile="${war.file}" webxml="${web.dir}/WEB-INF/web.xml">
             <fileset dir="${web.dir}" />
             <lib dir="${flat_libs.dir}" />
             <classes dir="${classes.dir}" />
             <manifest>
-                <attribute name="Built-By"               value="Web Platform Team" />
-                <attribute name="Implementation-Title"   value="CRM Email Service" />
+                <attribute name="Built-By"               value="Brent and Kyle" />
+                <attribute name="Implementation-Title"   value="Crowdsource Artist Development" />
                 <attribute name="Implementation-Version" value="1.00.${build.number}" />
-                <attribute name="Implementation-Vendor"  value="Hewlett-Packard Development Company, LP." />
+                <attribute name="Implementation-Vendor"  value="Dark Canyon Development." />
             </manifest>
         </war>
 
