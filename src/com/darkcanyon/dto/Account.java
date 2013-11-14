@@ -1,6 +1,6 @@
 package com.darkcanyon.dto;
 
-import com.sun.corba.se.spi.ior.ObjectId;
+import org.bson.types.ObjectId;
 
 public class Account 
 {
